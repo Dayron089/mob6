@@ -105,7 +105,7 @@ fun PokemonListScreen(
                         contentPadding = PaddingValues(16.dp),
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        items(state.pokemon) { item ->
+                        items(state.pokemon, key = { it.id }) { item ->
                             PokemonItem(item = item) {
                                 onNavigateToDetail(item.name)
                             }

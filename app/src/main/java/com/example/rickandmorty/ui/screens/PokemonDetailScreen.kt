@@ -1,7 +1,9 @@
 package com.example.rickandmorty.ui.screens
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
@@ -11,6 +13,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
@@ -128,12 +131,14 @@ fun PokemonDetailContent(pokemon: PokemonDetail) {
                 Text("Types:", style = MaterialTheme.typography.titleMedium)
                 Row {
                     pokemon.types.forEach { typeSlot ->
-                        AssistChip(
-                            onClick = {},
-                            label = {
-                                Text(typeSlot.type.name.replaceFirstChar { it.uppercaseChar() })
-                            },
-                            modifier = Modifier.padding(end = 8.dp)
+                        Text(
+                            text = typeSlot.type.name.replaceFirstChar { it.uppercaseChar() },
+                            modifier = Modifier
+                                .padding(end = 8.dp)
+                                .clip(RoundedCornerShape(16.dp))
+                                .background(MaterialTheme.colorScheme.surfaceVariant)
+                                .padding(horizontal = 12.dp, vertical = 6.dp),
+                            style = MaterialTheme.typography.bodyMedium
                         )
                     }
                 }

@@ -51,21 +51,15 @@ class MainViewModel @Inject constructor(
     private val repository: PokemonRepository
 ) : ViewModel() {
 
-    // === Источник 1: строка поиска (UI input, длительное состояние → StateFlow) ===
     private val _searchQuery = MutableStateFlow("")
     val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
 
-    // === Источник 2: режим отображения списка (UI input, длительное состояние) ===
     private val _viewMode = MutableStateFlow(ViewMode.ALL)
     val viewMode: StateFlow<ViewMode> = _viewMode.asStateFlow()
 
-    // === Источник 3: поток триггеров refresh/retry (события, не состояние → SharedFlow) ===
-    // replay=0: новая подписка не триггерит лишнюю перезагрузку
-    // extraBufferCapacity=1: tryEmit из UI не теряет события при гонке
     private val _refreshTrigger = MutableSharedFlow<Unit>(replay = 0, extraBufferCapacity = 1)
     val refreshTrigger: SharedFlow<Unit> = _refreshTrigger.asSharedFlow()
 
-    // === Источник 4 (data layer): избранное из Room ===
     val favorites: StateFlow<List<FavoritePokemonEntity>> =
         repository.favorites.stateIn(
             scope = viewModelScope,
@@ -89,25 +83,11 @@ class MainViewModel @Inject constructor(
             initialValue = emptyList()
         )
 
-    /**
-     * Промежуточный «сырой» результат загрузки списка по [searchQuery] и [refreshTrigger].
-     *
-     *   searchQuery (debounced+distinct)  +  refreshTrigger
-     *                       │                       │
-     *                       └───────  combine  ─────┘
-     *                                   │
-     *                              flatMapLatest          ← старый запрос отменяется
-     *                                   │                  при новом значении
-     *                                   ▼
-     *                       Loading  →  Success(list) | Failed(msg)
-     */
     private val rawListResult: Flow<RawListResult> = combine(
-        _searchQuery
-            .debounce(300)                 // оператор управления потоком
-            .distinctUntilChanged(),       // отсечь дубли по содержанию
-        _refreshTrigger.onStart { emit(Unit) }  // первый запуск без ожидания нажатия
+        _searchQuery.debounce(300).distinctUntilChanged(),
+        _refreshTrigger.onStart { emit(Unit) }
     ) { query, _ -> query }
-        .flatMapLatest { query ->          // отмена устаревшего запроса
+        .flatMapLatest { query ->
             flow {
                 emit(RawListResult.Loading)
                 val result = repository.getPokemonList(query.ifBlank { null })
@@ -120,14 +100,6 @@ class MainViewModel @Inject constructor(
             }
         }
 
-    /**
-     * Финальное состояние списка — композиция четырёх независимых источников
-     * с применением [ViewMode] и пересечением с избранным из Room.
-     *
-     * При смене любого из четырёх потоков состояние пересчитывается автоматически —
-     * например, удаление элемента из favorites в режиме [ViewMode.FAVORITES_ONLY]
-     * мгновенно убирает его из видимого списка без ручной перезагрузки.
-     */
     val listUiState: StateFlow<ListUiState> = combine(
         rawListResult,
         _viewMode,
@@ -148,7 +120,10 @@ class MainViewModel @Inject constructor(
         favoriteIds: Set<Int>
     ): ListUiState = when (result) {
         RawListResult.Loading -> ListUiState.Loading
-        is RawListResult.Failed -> ListUiState.Error(result.message)
+        is RawListResult.Failed -> when (mode) {
+            ViewMode.FAVORITES_ONLY -> ListUiState.Empty
+            ViewMode.ALL -> ListUiState.Error(result.message)
+        }
         is RawListResult.Loaded -> {
             val visible = when (mode) {
                 ViewMode.ALL -> result.list
@@ -159,11 +134,8 @@ class MainViewModel @Inject constructor(
         }
     }
 
-    // === Detail-state остаётся на императивной логике, т.к. это разовая загрузка ===
     private val _detailUiState = MutableStateFlow<DetailUiState>(DetailUiState.Loading)
     val detailUiState: StateFlow<DetailUiState> = _detailUiState.asStateFlow()
-
-    // === User actions ===
 
     fun onSearchQueryChanged(query: String) {
         _searchQuery.value = query
@@ -173,13 +145,15 @@ class MainViewModel @Inject constructor(
         _viewMode.value = mode
     }
 
-    /** Кнопка Retry на ошибке и кнопка Refresh в TopBar — оба пушат в один поток событий. */
     fun refresh() {
         _refreshTrigger.tryEmit(Unit)
     }
 
+    private var detailJob: kotlinx.coroutines.Job? = null
+
     fun loadPokemonDetails(name: String) {
-        viewModelScope.launch {
+        detailJob?.cancel()
+        detailJob = viewModelScope.launch {
             _detailUiState.value = DetailUiState.Loading
             val result = repository.getPokemonDetail(name)
             result.onSuccess { detail ->

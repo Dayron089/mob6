@@ -86,6 +86,9 @@ fun FavoritesScreen(
     }
 }
 
+private fun formatTypes(csv: String): String =
+    csv.split(",").joinToString(", ") { it.replaceFirstChar { c -> c.uppercaseChar() } }
+
 @Composable
 private fun FavoriteItemRow(
     item: FavoritePokemonEntity,
@@ -114,11 +117,7 @@ private fun FavoriteItemRow(
                 )
                 if (item.types.isNotBlank()) {
                     Text(
-                        text = item.types
-                            .split(",")
-                            .joinToString(", ") { typeName ->
-                                typeName.replaceFirstChar { it.uppercaseChar() }
-                            },
+                        text = formatTypes(item.types),
                         style = MaterialTheme.typography.bodyMedium
                     )
                 }

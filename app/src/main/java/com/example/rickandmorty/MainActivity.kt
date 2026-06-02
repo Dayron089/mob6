@@ -10,6 +10,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.navigation.NavBackStackEntry
+import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -44,14 +46,22 @@ class MainActivity : ComponentActivity() {
 private const val GRAPH_ROUTE = "pokemon_graph"
 
 @Composable
+private fun NavBackStackEntry.graphViewModel(
+    navController: NavHostController,
+    graphRoute: String
+): MainViewModel {
+    val parent = remember(this) { navController.getBackStackEntry(graphRoute) }
+    return hiltViewModel(parent)
+}
+
+@Composable
 fun PokemonNavGraph() {
     val navController = rememberNavController()
 
     NavHost(navController = navController, startDestination = GRAPH_ROUTE) {
         navigation(startDestination = "list", route = GRAPH_ROUTE) {
             composable("list") { entry ->
-                val parent = remember(entry) { navController.getBackStackEntry(GRAPH_ROUTE) }
-                val viewModel: MainViewModel = hiltViewModel(parent)
+                val viewModel: MainViewModel = graphViewModel(entry, navController, GRAPH_ROUTE)
                 PokemonListScreen(
                     viewModel = viewModel,
                     onNavigateToDetail = { name -> navController.navigate("detail/$name") },
@@ -60,8 +70,7 @@ fun PokemonNavGraph() {
                 )
             }
             composable("favorites") { entry ->
-                val parent = remember(entry) { navController.getBackStackEntry(GRAPH_ROUTE) }
-                val viewModel: MainViewModel = hiltViewModel(parent)
+                val viewModel: MainViewModel = graphViewModel(entry, navController, GRAPH_ROUTE)
                 FavoritesScreen(
                     viewModel = viewModel,
                     onNavigateToDetail = { name -> navController.navigate("detail/$name") },
@@ -69,8 +78,7 @@ fun PokemonNavGraph() {
                 )
             }
             composable("history") { entry ->
-                val parent = remember(entry) { navController.getBackStackEntry(GRAPH_ROUTE) }
-                val viewModel: MainViewModel = hiltViewModel(parent)
+                val viewModel: MainViewModel = graphViewModel(entry, navController, GRAPH_ROUTE)
                 HistoryScreen(
                     viewModel = viewModel,
                     onNavigateToDetail = { name -> navController.navigate("detail/$name") },
@@ -81,8 +89,7 @@ fun PokemonNavGraph() {
                 route = "detail/{name}",
                 arguments = listOf(navArgument("name") { type = NavType.StringType })
             ) { entry ->
-                val parent = remember(entry) { navController.getBackStackEntry(GRAPH_ROUTE) }
-                val viewModel: MainViewModel = hiltViewModel(parent)
+                val viewModel: MainViewModel = graphViewModel(entry, navController, GRAPH_ROUTE)
                 val name = entry.arguments?.getString("name") ?: ""
                 PokemonDetailScreen(
                     viewModel = viewModel,

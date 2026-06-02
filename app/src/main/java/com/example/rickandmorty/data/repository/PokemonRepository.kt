@@ -27,8 +27,7 @@ class PokemonRepository @Inject constructor(
 
     suspend fun getPokemonList(query: String? = null): Result<List<PokemonResult>> {
         return try {
-            if (cachedList.isEmpty()) {
-                // Fetch 151 (Gen 1) pokemon as a base set
+            if (cachedList.isEmpty() || query.isNullOrBlank()) {
                 cachedList = api.getPokemonList(limit = 151).results
             }
 
@@ -36,18 +35,24 @@ class PokemonRepository @Inject constructor(
                 cachedList
             } else {
                 cachedList.filter {
-                    it.name.contains(query.lowercase(Locale.getDefault()))
+                    it.name.contains(query.lowercase(Locale.ROOT))
                 }
             }
             Result.success(result)
         } catch (e: Exception) {
-            Result.failure(e)
+            if (cachedList.isNotEmpty()) {
+                val result = if (query.isNullOrBlank()) cachedList
+                else cachedList.filter { it.name.contains(query.lowercase(Locale.ROOT)) }
+                Result.success(result)
+            } else {
+                Result.failure(e)
+            }
         }
     }
 
     suspend fun getPokemonDetail(nameOrId: String): Result<PokemonDetail> {
         return try {
-            val response = api.getPokemonDetail(nameOrId.lowercase(Locale.getDefault()))
+            val response = api.getPokemonDetail(nameOrId.lowercase(Locale.ROOT))
             Result.success(response)
         } catch (e: Exception) {
             Result.failure(e)
