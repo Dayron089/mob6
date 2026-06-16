@@ -61,7 +61,7 @@ fun PokemonNavGraph() {
     NavHost(navController = navController, startDestination = GRAPH_ROUTE) {
         navigation(startDestination = "list", route = GRAPH_ROUTE) {
             composable("list") { entry ->
-                val viewModel: MainViewModel = graphViewModel(entry, navController, GRAPH_ROUTE)
+                val viewModel: MainViewModel = entry.graphViewModel(navController, GRAPH_ROUTE)
                 PokemonListScreen(
                     viewModel = viewModel,
                     onNavigateToDetail = { name -> navController.navigate("detail/$name") },
@@ -70,7 +70,7 @@ fun PokemonNavGraph() {
                 )
             }
             composable("favorites") { entry ->
-                val viewModel: MainViewModel = graphViewModel(entry, navController, GRAPH_ROUTE)
+                val viewModel: MainViewModel = entry.graphViewModel(navController, GRAPH_ROUTE)
                 FavoritesScreen(
                     viewModel = viewModel,
                     onNavigateToDetail = { name -> navController.navigate("detail/$name") },
@@ -78,7 +78,7 @@ fun PokemonNavGraph() {
                 )
             }
             composable("history") { entry ->
-                val viewModel: MainViewModel = graphViewModel(entry, navController, GRAPH_ROUTE)
+                val viewModel: MainViewModel = entry.graphViewModel(navController, GRAPH_ROUTE)
                 HistoryScreen(
                     viewModel = viewModel,
                     onNavigateToDetail = { name -> navController.navigate("detail/$name") },
@@ -89,7 +89,7 @@ fun PokemonNavGraph() {
                 route = "detail/{name}",
                 arguments = listOf(navArgument("name") { type = NavType.StringType })
             ) { entry ->
-                val viewModel: MainViewModel = graphViewModel(entry, navController, GRAPH_ROUTE)
+                val viewModel: MainViewModel = entry.graphViewModel(navController, GRAPH_ROUTE)
                 val name = entry.arguments?.getString("name") ?: ""
                 PokemonDetailScreen(
                     viewModel = viewModel,
